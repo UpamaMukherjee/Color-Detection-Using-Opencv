@@ -1,0 +1,59 @@
+import numpy as np
+import cv2
+from PIL import Image
+from util import get_color_limits  # Assuming this is defined elsewhere to get color ranges
+
+# Define common colors in BGR (for OpenCV)
+colors = {
+    "Red": [0, 0, 255],  # Red in BGR
+    "Green": [0, 255, 0],  # Green in BGR
+    "Blue": [255, 0, 0],  # Blue in BGR
+    "Yellow": [0, 255, 255],  # Yellow in BGR
+}
+
+# Initialize webcam
+cap = cv2.VideoCapture(0)
+cap.set(cv2.CAP_PROP_FRAME_WIDTH, 320)
+cap.set(cv2.CAP_PROP_FRAME_HEIGHT, 240)
+
+while True:
+    ret, frame = cap.read()  # Read a frame from the webcam
+    if not ret:
+        break
+
+    # Convert frame to HSV color space
+    hsv_image = cv2.cvtColor(frame, cv2.COLOR_BGR2HSV)
+
+    # Loop through defined colors
+    for color_name, bgr_value in colors.items():
+        # Get the color limits for the current color
+        lower_limit, upper_limit = get_color_limits(color=bgr_value)
+
+        # Create a mask to detect objects with the current color
+        mask = cv2.inRange(hsv_image, lower_limit, upper_limit)
+
+        # Convert the mask to PIL format to get bounding box
+        mask_image = Image.fromarray(mask)
+        bbox = mask_image.getbbox()  # Get the bounding box for detected colored areas
+
+        if bbox is not None:
+            x1, y1, x2, y2 = bbox
+            # Draw a rectangle around the detected object
+            cv2.rectangle(frame, (x1, y1), (x2, y2), bgr_value, 2)
+
+            # Display the name of the detected color
+            text_position = (x1, y1 - 10)  # Position of the text above the rectangle
+            cv2.putText(
+                frame, color_name, text_position, cv2.FONT_HERSHEY_SIMPLEX, 0.5, bgr_value, 2
+            )
+
+    # Display the frame with bounding boxes and text
+    cv2.imshow("frame", frame)
+
+    # Exit the loop when 'q' is pressed
+    if cv2.waitKey(1) & 0xFF == ord("q"):
+        break
+
+# Clean up
+cap.release()
+cv2.destroyAllWindows()
